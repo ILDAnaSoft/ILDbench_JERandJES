@@ -26,7 +26,7 @@ MySLDecayFinder aMySLDecayFinder ;
 
 
 MySLDecayFinder::MySLDecayFinder() :
-	Processor("MySLDecayFinder"),
+	Processor("SLDecayFinder"),
 	m_nRun(0),
      m_nEvt(0),
      m_nRunSum(0),
@@ -90,6 +90,12 @@ MySLDecayFinder::MySLDecayFinder() :
 						std::string("MySLDecayFinder.root")
 						);
 
+    registerOutputCollection( LCIO::RECONSTRUCTEDPARTICLE,
+                       "SemileptonicDecays", // Currently undefined and only used to carry parameters of number of decays
+                       "To be defined",
+                       m_outcolSLDecays ,
+                       std::string("SLDecays")
+                       );
 }
 
 
@@ -140,11 +146,19 @@ void MySLDecayFinder::processEvent( LCEvent *pLCEvent )
 	if ((m_nEvtSum % 100) == 0)
          std::cout << " processed events: " << m_nEvtSum << std::endl;
 
+    // New reco particle collection for the semi-leptonic decays
+    m_col_SLDecays = new LCCollectionVec(LCIO::RECONSTRUCTEDPARTICLE);
 
 	this->Clear();
 	this->ExtractCollections(pLCEvent);
 	this->FindSLDecays(pLCEvent);
 	m_pTTree->Fill();
+
+
+    // Set numbers of semileptonic decays as event parameters
+    m_col_SLDecays->parameters().setValue("nBSLD", (int)m_nSLDecayBHad);
+    m_col_SLDecays->parameters().setValue("nCSLD", (int)m_nSLDecayCHad);
+    pLCEvent->addCollection(m_col_SLDecays, m_outcolSLDecays);
 }
 
 
@@ -234,6 +248,7 @@ void MySLDecayFinder::ExtractCollections(EVENT::LCEvent *pLCEvent)
 
 void MySLDecayFinder::FindSLDecays(EVENT::LCEvent *pLCEvent)
 {
+
 	try
 	{
 		const EVENT::LCCollection *pLCCollection = pLCEvent->getCollection(m_mcParticleCollection);
@@ -291,4 +306,5 @@ void MySLDecayFinder::FindSLDecays(EVENT::LCEvent *pLCEvent)
      {
          streamlog_out(WARNING) << "Could not extract Semi-Leptonic decay " << std::endl;
      }
+
 }

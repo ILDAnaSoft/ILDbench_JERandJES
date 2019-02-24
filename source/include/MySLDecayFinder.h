@@ -2,6 +2,7 @@
 #define MySLDecayFinder_h 1
 
 #include "EVENT/LCStrVec.h"
+#include "IMPL/LCCollectionVec.h"
 #include "marlin/Processor.h"
 #include "lcio.h"
 #include <string>
@@ -87,6 +88,8 @@ private:
   int				m_nEvtSum{};
 
   std::string			m_mcParticleCollection{};
+  std::string		    m_outcolSLDecays{};
+  LCCollectionVec*      m_col_SLDecays{};
 
   int				m_printing;
   std::string         m_rootFile{};                           ///<
