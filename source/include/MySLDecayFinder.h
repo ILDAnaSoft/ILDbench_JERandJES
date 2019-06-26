@@ -2,6 +2,8 @@
 #define MySLDecayFinder_h 1
 
 #include "EVENT/LCStrVec.h"
+#include <EVENT/MCParticle.h>
+#include "IMPL/LCCollectionVec.h"
 #include "marlin/Processor.h"
 #include "lcio.h"
 #include <string>
@@ -70,74 +72,40 @@ private:
 
   void FindSLDecays(EVENT::LCEvent *pLCEvent);
 
+//  void CalculateVisible4Momentum();
+
   /** Called after data processing for clean up.
    */
-  virtual void end() ;
+virtual void end() ;
 
 
  protected:
 
   /** Input collection name.
    */
-  std::string _colName{} ;
+	std::string 					_colName{} ;
 
-  int				m_nRun{} ;
-  int				m_nEvt{} ;
-  int				m_nRunSum{};
-  int				m_nEvtSum{};
+	int						m_nRun{} ;
+	int						m_nEvt{} ;
+	int						m_nRunSum{};
+	int						m_nEvtSum{};
 
-  std::string			m_mcParticleCollection{};
+	std::string					m_mcParticleCollection{};
+	std::string					m_rootFile{};
+	std::string					m_SLDecaysCollection{};
+	LCCollectionVec					*m_col_SLDecays{};
 
-  int				m_printing;
-  std::string         m_rootFile{};                           ///<
-  int				m_lookForQuarksWithMotherZ;
-/*
-  ParticleVector		m_pfoVector{};
-  MCParticleVector		m_pfoTargetVector{};
-*/
-  int				m_nPfosTotal;                           ///<
-  int				m_nPfosNeutralHadrons;                  ///<
-  int				m_nPfosPhotons;                         ///<
-  int				m_nPfosTracks;                          ///<
-  float				m_pfoEnergyTotal;                       ///<
-  float				m_pfoEnergyNeutralHadrons;              ///<
-  float				m_pfoEnergyPhotons;                     ///<
-  float				m_pfoEnergyTracks;                      ///<
-  float				m_pfoMassTotal;                         ///<
-  std::vector<int>		m_pfoPdgCodes{};                        ///<
 
-  int				m_nMcpsTotal;                           ///<
-  int				m_nMcpsNeutralHadrons;                  ///<
-  int				m_nMcpsPhotons;                         ///<
-  int				m_nMcpsTracks;                          ///<
-  float				m_mcpEnergyTotal;                       ///<
-  float				m_mcpEnergyNeutralHadrons;              ///<
-  float				m_mcpEnergyPhotons;                     ///<
-  float				m_mcpEnergyTracks;                      ///<
-  float				m_mcpMassTotal;                         ///<
-  std::vector<int>		m_mcpPdgCodes{};                        ///<
+	int						m_nSLDecayTotal;
+	int						m_nSLDecayBHad;
+	int						m_nSLDecayCHad;
 
-  float				m_mcEnergyENu;                          ///<
-  float				m_mcEnergyFwd;                          ///<
-  float				m_eQQ;                                  ///<
-  float				m_eQ1;                                  ///<
-  float				m_eQ2;                                  ///<
-  float				m_costQQ;                               ///<
-  float				m_costQ1;                               ///<
-  float				m_costQ2;                               ///<
-  float				m_mQQ;                                  ///<
-  float				m_thrust;                               ///<
-  int				m_qPdg;                                 ///<
-
-  int				m_nSLDecayTotal;                           ///<
-  int				m_nSLDecayBHad;                           ///<
-  int				m_nSLDecayCHad;                           ///<
-
-  TFile              *m_pTFile{};                             ///<
-  TTree              *m_pTTree{};                             ///<
-  TH1F               *m_hPfoEnergySum{};                      ///<
-  TH1F               *m_hPfoEnergySumL7A{};                   ///<
-
+	typedef std::vector<int>			IntVector;
+	IntVector					m_BHadronIndex;
+	IntVector					m_CHadronIndex;
+	typedef std::vector<const EVENT::MCParticle*>	MCParticleVector;
+	MCParticleVector				m_mcUnstableParent{};
+	MCParticleVector				m_mcDaughtersVector{};
 
 } ;
 

@@ -3,6 +3,7 @@
 
 #include <EVENT/LCCollection.h>
 #include <EVENT/MCParticle.h>
+#include <EVENT/LCParameters.h>
 
 // ----- include for verbosity dependend logging ---------
 #include "marlin/VerbosityLevels.h"
@@ -26,51 +27,18 @@ MySLDecayFinder aMySLDecayFinder ;
 
 
 MySLDecayFinder::MySLDecayFinder() :
-	Processor("MySLDecayFinder"),
+	Processor("SLDecayFinder"),
 	m_nRun(0),
-     m_nEvt(0),
-     m_nRunSum(0),
-     m_nEvtSum(0),
-     m_printing(0),
-     m_lookForQuarksWithMotherZ(0),
-	m_nPfosTotal(0),
-     m_nPfosNeutralHadrons(0),
-     m_nPfosPhotons(0),
-     m_nPfosTracks(0),
-     m_pfoEnergyTotal(0.f),
-     m_pfoEnergyNeutralHadrons(0.f),
-     m_pfoEnergyPhotons(0.f),
-     m_pfoEnergyTracks(0.f),
-	m_pfoMassTotal(0.f),
-	m_nMcpsTotal(0),
-     m_nMcpsNeutralHadrons(0),
-     m_nMcpsPhotons(0),
-     m_nMcpsTracks(0),
-     m_mcpEnergyTotal(0.f),
-     m_mcpEnergyNeutralHadrons(0.f),
-     m_mcpEnergyPhotons(0.f),
-     m_mcpEnergyTracks(0.f),
-	m_mcpMassTotal(0.f),
-
-	m_mcEnergyENu(0.f),
-     m_mcEnergyFwd(0.f),
-     m_eQQ(-99.f),
-     m_eQ1(-99.f),
-     m_eQ2(-99.f),
-     m_costQQ(-99.f),
-     m_costQ1(-99.f),
-     m_costQ2(-99.f),
-     m_mQQ(-99.f),
-     m_thrust(-99.f),
-     m_qPdg(-99.f),
+	m_nEvt(0),
+	m_nRunSum(0),
+	m_nEvtSum(0),
 
 	m_nSLDecayTotal(0),
 	m_nSLDecayBHad(0),
 	m_nSLDecayCHad(0),
 
-	m_pTFile(NULL)
-
-
+	m_BHadronIndex{},
+	m_CHadronIndex{}
 {
 
     // modify processor description
@@ -78,17 +46,19 @@ MySLDecayFinder::MySLDecayFinder() :
 
 
     // register steering parameters: name, description, class-variable, default value
-    registerInputCollection( LCIO::MCPARTICLE,
-          				"MCParticleCollection" ,
-          				"Name of the MCParticle collection"  ,
-          				m_mcParticleCollection,
-          				std::string("MCParticle")
-    						);
-    registerProcessorParameter("RootFile",
-						"Name of the output root file",
-						m_rootFile,
-						std::string("MySLDecayFinder.root")
-						);
+	registerInputCollection( 	LCIO::MCPARTICLE,
+	          			"MCParticleCollection" ,
+    	      				"Name of the MCParticle collection"  ,
+    	      				m_mcParticleCollection,
+    	      				std::string("MCParticle")
+    					);
+
+	registerOutputCollection( 	LCIO::MCPARTICLE,
+					"SemiLeptonicDecays",
+					"Collection of semi-leptonic decays",
+					m_SLDecaysCollection,
+					std::string("SLDecay")
+					);
 
 }
 
@@ -102,30 +72,19 @@ void MySLDecayFinder::init()
     // usually a good idea to
     printParameters() ;
 
-    m_nRun = 0 ;
-    m_nEvt = 0 ;
-    m_nRunSum = 0;
-    m_nEvtSum = 0;
-    this->Clear();
-
-	m_pTFile = new TFile(m_rootFile.c_str(), "recreate");
-	m_pTTree = new TTree("PfoAnalysisTree", "PfoAnalysisTree");
-	m_pTTree->SetDirectory(m_pTFile);
-	m_pTTree->Branch("run", &m_nRun, "run/I");
-	m_pTTree->Branch("event", &m_nEvt, "event/I");
-	m_pTTree->Branch("nBHadSLDecay", &m_nSLDecayBHad, "nBHadSLDecay/I");
-	m_pTTree->Branch("nCHadSLDecay", &m_nSLDecayCHad, "nCHadSLDecay/I");
-	m_pTTree->Branch("nSLDecayTotal", &m_nSLDecayTotal, "nSLDecayTotal/I");
+	m_nRun = 0 ;
+	m_nEvt = 0 ;
+	m_nRunSum = 0;
+	m_nEvtSum = 0;
+	this->Clear();
 }
 
 
 void MySLDecayFinder::processRunHeader( LCRunHeader *pLCRunHeader)
 {
 	m_nRun = 0;
-     m_nEvt = 0;
-     ++m_nRunSum;
-
-//    m_nRun++ ;
+	m_nEvt = 0;
+	++m_nRunSum;
 }
 
 
@@ -134,17 +93,26 @@ void MySLDecayFinder::processEvent( LCEvent *pLCEvent )
 {
 
 	m_nRun = pLCEvent->getRunNumber();
-     m_nEvt = pLCEvent->getEventNumber();
-     ++m_nEvtSum;
+	m_nEvt = pLCEvent->getEventNumber();
+	++m_nEvtSum;
 
 	if ((m_nEvtSum % 100) == 0)
-         std::cout << " processed events: " << m_nEvtSum << std::endl;
+		std::cout << " processed events: " << m_nEvtSum << std::endl;
+
+	m_col_SLDecays = new LCCollectionVec(LCIO::MCPARTICLE);
 
 
 	this->Clear();
 	this->ExtractCollections(pLCEvent);
 	this->FindSLDecays(pLCEvent);
-	m_pTTree->Fill();
+
+	m_col_SLDecays->parameters().setValue("nBSLD", (int)m_nSLDecayBHad);
+	m_col_SLDecays->parameters().setValue("nCSLD", (int)m_nSLDecayCHad);
+	m_col_SLDecays->parameters().setValue("nSLD", (int)m_nSLDecayTotal);
+	m_col_SLDecays->parameters().setValues("BHadronIndex", (std::vector<int>)m_BHadronIndex);
+	m_col_SLDecays->parameters().setValues("CHadronIndex", (std::vector<int>)m_CHadronIndex);
+	pLCEvent->addCollection(m_col_SLDecays, m_SLDecaysCollection);
+
 }
 
 
@@ -158,53 +126,16 @@ void MySLDecayFinder::check( LCEvent *pLCEvent )
 void MySLDecayFinder::end()
 {
 
-	m_pTFile->cd();
-     m_pTTree->Write();
-
-    //   std::cout << "MySLDecayFinder::end()  " << name()
-    // 	    << " processed " << _nEvt << " events in " << _nRun << " runs "
-    // 	    << std::endl ;
-
 }
 
 void MySLDecayFinder::Clear()
 {
-	m_nPfosTotal = 0;
-     m_nPfosNeutralHadrons = 0;
-     m_nPfosPhotons = 0;
-     m_nPfosTracks = 0;
-     m_pfoEnergyTotal = 0.f;
-     m_pfoEnergyNeutralHadrons = 0.f;
-     m_pfoEnergyPhotons = 0.f;
-     m_pfoEnergyTracks = 0.f;
-	m_pfoMassTotal = 0.f;
 
-	m_nMcpsTotal = 0;
-     m_nMcpsNeutralHadrons = 0;
-     m_nMcpsPhotons = 0;
-     m_nMcpsTracks = 0;
-     m_mcpEnergyTotal = 0.f;
-     m_mcpEnergyNeutralHadrons = 0.f;
-     m_mcpEnergyPhotons = 0.f;
-     m_mcpEnergyTracks = 0.f;
-	m_mcpMassTotal = 0.f;
-
-	m_mcEnergyENu = 0.f;
-     m_mcEnergyFwd = 0.f;
-     m_eQQ = -99.f;
-     m_eQ1 = -99.f;
-     m_eQ2 = -99.f;
-     m_costQQ = -99.f;
-     m_costQ1 = -99.f;
-     m_costQ2 = -99.f;
-     m_mQQ = -99.f;
-     m_thrust = -99.f;
-     m_qPdg = -99;
-
+	m_BHadronIndex.clear();
+	m_CHadronIndex.clear();
 	m_nSLDecayTotal = 0;
 	m_nSLDecayBHad = 0;
 	m_nSLDecayCHad = 0;
-
 }
 
 void MySLDecayFinder::ExtractCollections(EVENT::LCEvent *pLCEvent)
@@ -223,7 +154,6 @@ void MySLDecayFinder::ExtractCollections(EVENT::LCEvent *pLCEvent)
 			if (!pMCParticle->getParents().empty())
 				continue;
 
-//             this->ApplyPfoSelectionRules(pMCParticle, mcPfoCandidates);
 		}
 	}
      catch (...)
@@ -237,7 +167,6 @@ void MySLDecayFinder::FindSLDecays(EVENT::LCEvent *pLCEvent)
 	try
 	{
 		const EVENT::LCCollection *pLCCollection = pLCEvent->getCollection(m_mcParticleCollection);
-
 		for (unsigned int i = 0, nElements = pLCCollection->getNumberOfElements(); i < nElements; ++i)
 		{
 			const EVENT::MCParticle *pMCParticle = dynamic_cast<EVENT::MCParticle*>(pLCCollection->getElementAt(i));
@@ -246,43 +175,45 @@ void MySLDecayFinder::FindSLDecays(EVENT::LCEvent *pLCEvent)
 				throw EVENT::Exception("Collection type mismatch");
 
 			const int absPdgCode(std::abs(pMCParticle->getPDG()));
-			if ((absPdgCode == 12) || (absPdgCode == 14) || (absPdgCode == 16))
+			if ((floor(absPdgCode/100)==5) || (floor(absPdgCode/1000)==5))
 			{
-				if (!(pMCParticle->getParents().empty()))
+				for (unsigned int d = 0; d < (pMCParticle->getDaughters()).size(); ++d)
 				{
-					for (unsigned int p = 0; p < (pMCParticle->getParents()).size(); ++p)
+					const int absDauPdgCode(std::abs(((pMCParticle->getDaughters())[d])->getPDG()));
+					if ((absDauPdgCode == 12) || (absDauPdgCode == 14) || (absDauPdgCode == 16))
 					{
-						const int absParPdgCode(std::abs((pMCParticle->getParents())[p]->getPDG()));
-						if ((floor(absParPdgCode/100)==5) || (floor(absParPdgCode/1000)==5))
+						for (unsigned int o_d = 0; o_d < (pMCParticle->getDaughters()).size(); ++o_d)
 						{
-							for (unsigned int d = 0; d < (((pMCParticle->getParents())[p])->getDaughters()).size(); ++d)
+							if (std::abs(((pMCParticle->getDaughters())[o_d])->getPDG()) == absDauPdgCode - 1)
 							{
-								const int absDauPdgCode(std::abs(((pMCParticle->getParents())[p]->getDaughters())[d]->getPDG()));
-								if ((absDauPdgCode == 11) || (absDauPdgCode == 13) || (absDauPdgCode == 15))
-								{
-									++m_nSLDecayTotal;
-									++m_nSLDecayBHad;
-									streamlog_out(DEBUG) << "One Semi-Leptonic decay of B-Hadron was found" << std::endl;
-								}
-							}
-						}
-						if ((floor(absParPdgCode/100)==4) || (floor(absParPdgCode/1000)==4))
-						{
-							for (unsigned int d = 0; d < (((pMCParticle->getParents())[p])->getDaughters()).size(); ++d)
-							{
-								const int absDauPdgCode(std::abs(((pMCParticle->getParents())[p]->getDaughters())[d]->getPDG()));
-								if ((absDauPdgCode == 11) || (absDauPdgCode == 13) || (absDauPdgCode == 15))
-								{
-									++m_nSLDecayTotal;
-									++m_nSLDecayCHad;
-									streamlog_out(DEBUG) << "One Semi-Leptonic decay of Charmed-Hadron was found" << std::endl;
-								}
+								++m_nSLDecayBHad;
+								m_BHadronIndex.push_back(i);
 							}
 						}
 					}
 				}
 			}
+			if ((floor(absPdgCode/100)==4) || (floor(absPdgCode/1000)==4))
+			{
+				for (unsigned int d = 0; d < (pMCParticle->getDaughters()).size(); ++d)
+				{
+					const int absDauPdgCode(std::abs(((pMCParticle->getDaughters())[d])->getPDG()));
+					if ((absDauPdgCode == 12) || (absDauPdgCode == 14) || (absDauPdgCode == 16))
+					{
+						for (unsigned int o_d = 0; o_d < (pMCParticle->getDaughters()).size(); ++o_d)
+						{
+							if (std::abs(((pMCParticle->getDaughters())[o_d])->getPDG()) == absDauPdgCode - 1)
+							{
+								++m_nSLDecayCHad;
+								m_CHadronIndex.push_back(i);
+							}
+						}
+					}
+				}
+			}
+
 		}
+		m_nSLDecayTotal = m_nSLDecayBHad + m_nSLDecayCHad;
 		streamlog_out(DEBUG) << "Number of Semi-Leptonic decay of B-Hadron: " << m_nSLDecayBHad << std::endl;
 		streamlog_out(DEBUG) << "Number of Semi-Leptonic decay of C-Hadron: " << m_nSLDecayCHad << std::endl;
 		streamlog_out(DEBUG) << "Total Number of Semi-Leptonic decays: " << m_nSLDecayTotal << std::endl;
