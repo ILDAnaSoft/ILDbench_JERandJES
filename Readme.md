@@ -28,7 +28,11 @@ Marlin ./ILDbench_JERandJES/xml/PFOAnalysis.xml \
       --global.LCIOInputFiles=${input_file} \ input_file=input lcio REC/DST file
       --constant.OutputBaseName=${output_file_basename} \ output_file_basename = basename for output root file
 ```
-### TOutput:
+### Important
+
+Note that after initializing ILCSoft, standard pfoanalysis processor is exported. By exporting libILDbench_JERandJES library, standard pfoanalysis should be removed from library list
+
+### Output:
 
 output root file contains additional branchs compared to the standard pfoanalysis root files that include neutrino corrections for different numbers of semi-leptonic decay. number of semi-lptonic decays of B/C hadron or total (nBSLD/nCSLD/nSLD) are stored in separate branches.
 
