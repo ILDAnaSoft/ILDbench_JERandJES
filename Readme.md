@@ -5,10 +5,9 @@ Extended JES and JER benchmark
 
 ### Installation
 
-Explain here:
 
-- what are the package dependencies (iLCSoft, others ?)
-- how to compile your package. Should normally be something like:
+- the package dependencies: iLCSoft
+- to compile the package:
 
 ```shell
 source /path/to/ilcsoft/init_ilcsoft.sh
@@ -18,35 +17,31 @@ cmake -C $ILCSOFT/ILCSoft.cmake ..
 make install
 ```
 
-### How to run the analysis
+### To run the analysis
 
-Explain here:
-
-- where to find data needed for your analysis or how to produce them
-- how to run you analysis: 
-   - Marlin processors to run ?
-   - ROOT macros to run ?
-   - Shell scripts ?
-   - Run the analysis on grid if you provide scripts for that
-
-Example:
 
 ```shell
-export MARLIN_DLL=./lib/libILDbench_JERandJES.so
-Marlin ./scripts/ExampleProcessor.xml
+export MARLIN_DLL=./ILDbench_JERandJES/lib/libILDbench_JERandJES.so
+Marlin ./ILDbench_JERandJES/xml/PFOAnalysis.xml \
+      --constant.lcgeo_DIR=$lcgeo_DIR \
+      --constant.DetectorModel=${Detector_Model} \ Detector_Model = ILD_l5_o1_v2/ILD_s5_o1_v2
+      --global.LCIOInputFiles=${input_file} \ input_file=input lcio REC/DST file
+      --constant.OutputBaseName=${output_file_basename} \ output_file_basename = basename for output root file
 ```
+### TOutput:
+
+output root file contains additional branchs compared to the standard pfoanalysis root files that include neutrino corrections for different numbers of semi-leptonic decay. number of semi-lptonic decays of B/C hadron or total (nBSLD/nCSLD/nSLD) are stored in separate branches.
 
 If you want to provide a lot of details on your analysis, use the doc/Readme.md and point to it from this Readme.md file:
 
 More documentation available here in [doc/Readme.md](doc/Readme.md) !
 
 ### Issues and contact
+- Issues:
+    - via the Github issue interface. For the skeleton package: https://github.com/ILDAnaSoft/ILDbench_JERandJES/issues
 
-Explain here how can people reach you:
-
-- via the Github issue interface. For the skeleton package: https://github.com/ILDAnaSoft/ILDbench_JERandJES/issues
-- **not mandatory**:
-    - email address
-    - working institute
+- contact:
+    - email address: yasser.radkhorrami@desy.de
+    - working institute: DESY/FLC
 
 
